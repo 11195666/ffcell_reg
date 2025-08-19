@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Msx授权系统注册</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .register-container {
+            max-width: 700px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .form-step {
+            display: none;
+        }
+        .form-step.active {
+            display: block;
+        }
+        .otp-input {
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 0 5px;
+        }
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="text-center mb-4">
+            <h2>Msx授权系统注册申请</h2>
+            <p class="text-muted">感谢您的关注，请填写以下信息以便我们审核</p>
+        </div>
+
+        <div class="progress mb-4">
+            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 50%;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">第 1 步</div>
+        </div>
+
+        <form id="agentRegisterForm" novalidate>
+            <div id="step-1" class="form-step active">
+                <h5 class="mb-3">基础信息</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="agentName" class="form-label">店铺名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="agentName" required>
+                    </div>
+                     <div class="col-md-6 mb-3">
+                        <label for="contactEmail" class="form-label">邮箱 (用于登录和接收通知) <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="contactEmail" required>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="contactPerson" class="form-label">姓名（选填）</label>
+                        <input type="text" class="form-control" id="contactPerson">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="contactPhone" class="form-label">手机（选填）</label>
+                        <input type="tel" class="form-control" id="contactPhone">
+                    </div>
+                </div>
+                
+                <h5 class="mb-3 mt-4">补充信息 (选填)</h5>
+                <div class="mb-3">
+                    <label for="supportContact" class="form-label">客服联系方式</label>
+                    <input type="text" class="form-control" id="supportContact" placeholder="例如: QQ：12345 / 微信：wechat">
+                    <div class="form-text">此信息将在生成授权码的卡片信息里展示给通过您购买的终端用户。</div>
+                </div>
+                <div class="mb-3">
+                    <label for="storeUrl" class="form-label">店铺或推广链接</label>
+                    <input type="url" class="form-control" id="storeUrl" placeholder="例如: https://shop.taobao.com/">
+                    <div class="form-text">此信息将在生成授权码的卡片信息里展示给通过您购买的终端用户。</div>
+                </div>
+                <div class="mb-3">
+                    <label for="applicationReason" class="form-label">备注</label>
+                    <textarea class="form-control" id="applicationReason" rows="3"></textarea>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="button" class="btn btn-primary" id="btnNextStep1">下一步：验证邮箱并提交</button>
+                </div>
+            </div>
+            <div id="step-2" class="form-step">
+                <h5 class="mb-3">邮箱验证</h5>
+                <p>我们已向您的邮箱 <strong id="emailToVerify"></strong> 发送了一封包含6位验证码的邮件，请查收并输入以完成申请。</p>
+                <div class="d-flex justify-content-center mb-3" id="otp-inputs">
+                    <input type="tel" class="form-control otp-input" maxlength="1">
+                    <input type="tel" class="form-control otp-input" maxlength="1">
+                    <input type="tel" class="form-control otp-input" maxlength="1">
+                    <input type="tel" class="form-control otp-input" maxlength="1">
+                    <input type="tel" class="form-control otp-input" maxlength="1">
+                    <input type="tel" class="form-control otp-input" maxlength="1">
+                </div>
+                <div class="text-center">
+                    <button type="button" class="btn btn-link" id="resendOtpBtn" disabled>60s后可重新发送</button>
+                </div>
+                <div class="mt-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" id="btnPrevStep2">返回修改信息</button>
+                    <button type="submit" class="btn btn-success" id="btnSubmit">确认提交申请</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const API_URL = '../api/';
+
+    const form = document.getElementById('agentRegisterForm');
+    const steps = document.querySelectorAll('.form-step');
+    const progressBar = document.getElementById('progressBar');
+
+    const btnNextStep1 = document.getElementById('btnNextStep1');
+    const agentNameInput = document.getElementById('agentName');
+    const contactPersonInput = document.getElementById('contactPerson');
+    const contactPhoneInput = document.getElementById('contactPhone');
+    const contactEmailInput = document.getElementById('contactEmail');
+
+    const btnPrevStep2 = document.getElementById('btnPrevStep2');
+    const emailToVerify = document.getElementById('emailToVerify');
+    const otpInputsContainer = document.getElementById('otp-inputs');
+    const otpInputs = otpInputsContainer.querySelectorAll('.otp-input');
+    const resendOtpBtn = document.getElementById('resendOtpBtn');
+
+    const btnSubmit = document.getElementById('btnSubmit');
+    const supportContactInput = document.getElementById('supportContact');
+    const storeUrlInput = document.getElementById('storeUrl');
+    const applicationReasonInput = document.getElementById('applicationReason');
+    
+    let currentStep = 1;
+    let otpCountdownTimer;
+
+    function goToStep(stepNumber) {
+        steps.forEach(step => step.classList.remove('active'));
+        const nextStep = document.getElementById(`step-${stepNumber}`);
+        if (nextStep) {
+            nextStep.classList.add('active');
+        }
+        
+        const progress = (stepNumber - 1) * 50 + 50;
+        progressBar.style.width = `${Math.min(progress, 100)}%`;
+        progressBar.textContent = `第 ${stepNumber} 步`;
+        currentStep = stepNumber;
+    }
+    
+    async function apiCall(endpoint, data) {
+        try {
+            const response = await fetch(`${API_URL}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || `HTTP error! status: ${response.status}`);
+            }
+            return result;
+        } catch (error) {
+            console.error('API call failed:', error);
+            Swal.fire('请求失败', error.message || '请检查您的网络连接并重试。', 'error');
+            return null;
+        }
+    }
+    
+    btnNextStep1.addEventListener('click', async function () {
+        if (!agentNameInput.checkValidity() || !contactEmailInput.checkValidity()) {
+             form.classList.add('was-validated');
+             Swal.fire('信息不完整', '请填写所有带 * 的必填项。', 'warning');
+             return;
+        }
+        form.classList.remove('was-validated');
+        const email = contactEmailInput.value.trim();
+        emailToVerify.textContent = email;
+
+        Swal.fire({
+            title: '正在发送验证码...',
+            text: `即将发送至 ${email}`,
+            didOpen: () => Swal.showLoading(),
+            allowOutsideClick: false
+        });
+
+        const result = await apiCall('send_email_otp.php', { 
+            email: email, 
+            purpose: 'agent_application' 
+        });
+
+        Swal.close();
+
+        if (result && result.success) {
+            Swal.fire('发送成功', '验证码已发送至您的邮箱，请注意查收。', 'success');
+            goToStep(2);
+            startOtpCountdown();
+            otpInputs[0].focus();
+        }
+    });
+
+    function startOtpCountdown() {
+        let seconds = 60;
+        resendOtpBtn.disabled = true;
+        resendOtpBtn.textContent = `${seconds}s后可重新发送`;
+        clearInterval(otpCountdownTimer);
+        otpCountdownTimer = setInterval(() => {
+            seconds--;
+            resendOtpBtn.textContent = `${seconds}s后可重新发送`;
+            if (seconds <= 0) {
+                clearInterval(otpCountdownTimer);
+                resendOtpBtn.disabled = false;
+                resendOtpBtn.textContent = '重新发送验证码';
+            }
+        }, 1000);
+    }
+    
+    resendOtpBtn.addEventListener('click', function() { btnNextStep1.click(); });
+
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            if (input.value && index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
+            }
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        });
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasteData = e.clipboardData.getData('text').trim();
+            if (/^\d{6}$/.test(pasteData)) {
+                for(let i=0; i<6; i++) {
+                    otpInputs[i].value = pasteData[i];
+                }
+                otpInputs[5].focus();
+            }
+        });
+    });
+
+    function getOtpCode() { return Array.from(otpInputs).map(input => input.value).join(''); }
+
+    btnPrevStep2.addEventListener('click', () => {
+        goToStep(1);
+        clearInterval(otpCountdownTimer);
+    });
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        
+        const otp = getOtpCode();
+        if (otp.length !== 6) {
+            Swal.fire('验证码不完整', '请输入6位验证码。', 'warning');
+            return;
+        }
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 正在提交...`;
+
+        const supportInfo = {
+            contact_method: supportContactInput.value.trim(),
+            store_url: storeUrlInput.value.trim()
+        };
+        
+        const finalData = {
+            action: 'submit_application', 
+            agent_name: agentNameInput.value.trim(),
+            contact_person: contactPersonInput.value.trim(),
+            contact_phone: contactPhoneInput.value.trim(),
+            contact_email: contactEmailInput.value.trim(),
+            otp: otp,
+            application_reason: applicationReasonInput.value.trim(),
+            support_info: JSON.stringify(supportInfo)
+        };
+        
+        const result = await apiCall('https://ffcell.jian.fan/api/agent_application.php', finalData);
+        
+        if (result && result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '提交成功！',
+                text: '您的申请已成功提交，我们将在1-3个工作日内完成审核，请留意您的邮箱。',
+                confirmButtonText: '好的'
+            }).then(() => {
+                window.location.reload(); 
+            });
+        } else {
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = '确认提交申请';
+        }
+    });
+});
+</script>
+</body>
+</html>
