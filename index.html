@@ -39,8 +39,8 @@
 <body>
     <div class="register-container">
         <div class="text-center mb-4">
-            <h2>Msx授权系统注册申请</h2>
-            <p class="text-muted">感谢您的关注，请填写以下信息以便我们审核</p>
+            <h2>Msx授权系统注册</h2>
+            <p class="text-muted">感谢您的关注，请填写以下信息注册</p>
         </div>
 
         <div class="progress mb-4">
@@ -107,7 +107,7 @@
                 </div>
                 <div class="mt-4 d-flex justify-content-between">
                     <button type="button" class="btn btn-secondary" id="btnPrevStep2">返回修改信息</button>
-                    <button type="submit" class="btn btn-success" id="btnSubmit">确认提交申请</button>
+                    <button type="submit" class="btn btn-success" id="btnSubmit">确认提交注册</button>
                 </div>
             </div>
         </form>
@@ -289,14 +289,14 @@
             Swal.fire({
                 icon: 'success',
                 title: '提交成功！',
-                text: '您的申请已成功提交，我们将在1-3个工作日内完成审核，请留意您的邮箱。',
+                text: '注册申请已成功提交，审核后会发送邮件通知。',
                 confirmButtonText: '好的'
             }).then(() => {
                 window.location.reload(); 
             });
         } else {
             btnSubmit.disabled = false;
-            btnSubmit.textContent = '确认提交申请';
+            btnSubmit.textContent = '确认提交注册';
         }
     });
 });
